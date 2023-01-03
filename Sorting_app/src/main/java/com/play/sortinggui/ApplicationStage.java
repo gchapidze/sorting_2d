@@ -1,9 +1,12 @@
 package com.play.sortinggui;
 
 import javafx.application.Application;
+import javafx.event.ActionEvent;
 import javafx.scene.Scene;
-import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -11,10 +14,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,7 +43,7 @@ public class ApplicationStage extends Application {
     private void setUp(Stage stage) {
         configureStage(stage);
         var root = initializeAndFillRoot();
-        var scene = buildScene(root);
+        var scene = new Scene(root);
 
         stage.setScene(scene);
     }
@@ -50,11 +53,6 @@ public class ApplicationStage extends Application {
         stage.setHeight(STAGE_HEIGHT);
         stage.setResizable(false);
         stage.show();
-    }
-
-    private Scene buildScene(Region root) {
-        Scene scene = new Scene(root);
-        return scene;
     }
 
     private Region initializeAndFillRoot() {
@@ -72,21 +70,38 @@ public class ApplicationStage extends Application {
         line.setEndY(25.00);
         line.setEndX(STAGE_WIDTH);
 
-        ChoiceBox<String> algorithmOptions = new ChoiceBox<>();
+        MenuButton algorithmOptions = new MenuButton("Algorithms");
         algorithmOptions.setLayoutX(0.0d);
         algorithmOptions.setLayoutY(0.0d);
 
-        var algorithms = algorithmOptions.getItems();
-        algorithms.add("BubbleSort");
 
-        algorithmOptions.getSelectionModel().selectedItemProperty().addListener((algorithm, x, y) -> {
-            String algo = algorithm.getValue();
-            if (algo.equals("BubbleSort")) {
-                bubbleSort(root, circleObjects);
-            }
+        var algorithms = algorithmOptions.getItems();
+        MenuItem bubbleSort = new MenuItem("BubbleSort");
+        algorithms.add(bubbleSort);
+
+
+        AlgorithmTask algorithmService = new AlgorithmTask(bubbleSort.getText(), () -> {
+            bubbleSort(root, circleObjects);
+            return null;
         });
 
-        root.getChildren().addAll(line, algorithmOptions);
+        bubbleSort.setOnAction((evt) -> {
+            Thread thread = new Thread(algorithmService.createTask());
+            thread.start();
+        });
+
+        Button reset = new Button("Reset");
+        reset.setLayoutX(110.0d);
+        reset.setLayoutY(0.0);
+        reset.addEventHandler(ActionEvent.ACTION, (evt) -> {
+            for (Circle circleObject : circleObjects) {
+                root.getChildren().remove(circleObject);
+            }
+            root.getChildren().remove(circleValueLabelPane);
+            stageCircleObjects(root);
+        });
+
+        root.getChildren().addAll(line, algorithmOptions, reset);
         stageCircleObjects(root);
     }
 
@@ -95,9 +110,9 @@ public class ApplicationStage extends Application {
         circleValueLabelPane.setSpacing(1.499999999999999d);
         circleValueLabelPane.setLayoutY(STAGE_HEIGHT - 70);
         circleValueLabelPane.setLayoutX(20);
-        AtomicReference<Double> radius = new AtomicReference<>(7.0);
-        AtomicReference<Double> xPos = new AtomicReference<>(25.0);
-        AtomicReference<Double> yPos = new AtomicReference<>(350.0);
+        AtomicReference<Double> radius = new AtomicReference<>(7.0d);
+        AtomicReference<Double> xPos = new AtomicReference<>(24.0d);
+        AtomicReference<Double> yPos = new AtomicReference<>(350.0d);
 
         circleObjects = new ArrayList<>();
         int labelCount = 59;
@@ -115,18 +130,17 @@ public class ApplicationStage extends Application {
             circle.setLayoutY(yPos.get());
 
             Label label = new Label(String.valueOf(labelCount));
-            label.setFont(new Font("consolas", 7));
-            circleValueLabelPane.getChildren().add(label);
+            label.setFont(Font.font("verdana", 7));
             labelCount--;
 
-            root.getChildren().addAll(circle);
-
             circleObjects.add(circle);
-            xPos.set(xPos.get() + 9.5);
+            circleValueLabelPane.getChildren().add(label);
+            xPos.set(xPos.get() + 9.59);
             if (circleObjects.size() == 59) {
                 root.getChildren().add(circleValueLabelPane);
                 break;
             }
+            root.getChildren().add(circle);
             radius.set(radius.get() - 0.1);
         }
     }
@@ -178,8 +192,6 @@ public class ApplicationStage extends Application {
                 properCoordinatesAfterSorting[rowIncrementer][1] = Double.parseDouble(coordinate[1]);
                 rowIncrementer++;
             }
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
